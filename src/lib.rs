@@ -1,4 +1,23 @@
+use chrono::format::strftime::StrftimeItems;
+use chrono::format::Item;
+use chrono::Local;
 use std::io::{BufRead, Write};
+
+/// Validates a strftime format string by checking for any unrecognized specifiers.
+/// Returns `Ok(())` if the format is valid, or `Err(message)` if not.
+pub fn validate_format(fmt: &str) -> Result<(), String> {
+    let has_error = StrftimeItems::new(fmt).any(|item| matches!(item, Item::Error));
+    if has_error {
+        Err(format!("invalid format string: {:?}", fmt))
+    } else {
+        Ok(())
+    }
+}
+
+/// Returns the current local time formatted with `fmt`.
+pub fn format_now(fmt: &str) -> String {
+    Local::now().format(fmt).to_string()
+}
 
 /// Prepends `timestamp` to `line` with a single space separator.
 pub fn prepend_timestamp(timestamp: &str, line: &str) -> String {
@@ -91,6 +110,48 @@ mod tests {
         });
 
         assert!(output.is_empty());
+    }
+
+    // --- validate_format ---
+
+    #[test]
+    fn validate_format_accepts_default_format() {
+        assert!(validate_format("%Y-%m-%d %H:%M:%S").is_ok());
+    }
+
+    #[test]
+    fn validate_format_accepts_custom_bracket_format() {
+        assert!(validate_format("[%H:%M:%S]").is_ok());
+    }
+
+    #[test]
+    fn validate_format_rejects_bare_percent_at_end() {
+        // A lone `%` at the end of the string is not a valid specifier.
+        assert!(validate_format("%").is_err());
+    }
+
+    #[test]
+    fn validate_format_rejects_unknown_specifier() {
+        // `%Q` is not a recognised strftime specifier.
+        assert!(validate_format("%Q").is_err());
+    }
+
+    // --- format_now ---
+
+    #[test]
+    fn format_now_default_format_has_correct_length() {
+        // "%Y-%m-%d %H:%M:%S" always produces a 19-char string.
+        let result = format_now("%Y-%m-%d %H:%M:%S");
+        assert_eq!(result.len(), 19, "got: {}", result);
+    }
+
+    #[test]
+    fn format_now_custom_format_applied() {
+        // "[%H:%M:%S]" always produces a 10-char string: "[HH:MM:SS]"
+        let result = format_now("[%H:%M:%S]");
+        assert_eq!(result.len(), 10, "got: {}", result);
+        assert!(result.starts_with('['));
+        assert!(result.ends_with(']'));
     }
 
     #[test]

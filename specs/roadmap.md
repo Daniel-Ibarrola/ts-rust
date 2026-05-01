@@ -21,7 +21,7 @@ $ echo "hello" | ts
 
 ---
 
-## [ ] Phase 2 — Format string argument
+## [x] Phase 2 — Format string argument
 
 Accept an optional positional argument for the strftime format string.
 Default to `%b %d %H:%M:%S` (GNU `ts` default).
