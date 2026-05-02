@@ -40,7 +40,17 @@ Improve error messages (bad format string, broken pipe, non-UTF-8 input).
 
 ---
 
-## [ ] Phase 4 — Relative timestamps (`-s`)
+## [x] Phase 4 — GitHub Actions CI
+
+Set up a basic CI pipeline with GitHub Actions that runs on every push and pull request.
+
+- Lint with `cargo clippy -- -D warnings`
+- Check formatting with `cargo fmt --check`
+- Run tests with `cargo test`
+
+---
+
+## [ ] Phase 5 — Relative timestamps (`-s`)
 
 Add `-s` / `--since-start` flag. Timestamp shows elapsed time since the process started (`HH:MM:SS.sss`).
 
@@ -52,13 +62,13 @@ $ slow_command | ts -s
 
 ---
 
-## [ ] Phase 5 — Incremental timestamps (`-i`)
+## [ ] Phase 6 — Incremental timestamps (`-i`)
 
 Add `-i` / `--incremental` flag. Timestamp shows time elapsed since the **previous** line.
 
 ---
 
-## [ ] Phase 6 — Publish to crates.io
+## [ ] Phase 7 — Publish to crates.io
 
 - Verify crate name availability
 - Add `description`, `license`, `repository`, `keywords` to `Cargo.toml`
