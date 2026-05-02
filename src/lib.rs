@@ -1,6 +1,6 @@
-use chrono::format::strftime::StrftimeItems;
-use chrono::format::Item;
 use chrono::Local;
+use chrono::format::Item;
+use chrono::format::strftime::StrftimeItems;
 use std::io::{BufRead, Write};
 
 /// Validates a strftime format string by checking for any unrecognized specifiers.
