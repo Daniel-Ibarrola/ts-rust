@@ -33,7 +33,7 @@ $ echo "hello" | ts '[%H:%M:%S]'
 
 ---
 
-## [ ] Phase 3 — Proper CLI with clap
+## [x] Phase 3 — Proper CLI with clap
 
 Wire up `clap`: `--help`, `--version`, named flags scaffold.
 Improve error messages (bad format string, broken pipe, non-UTF-8 input).

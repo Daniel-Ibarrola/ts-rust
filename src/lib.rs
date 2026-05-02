@@ -28,22 +28,25 @@ pub fn prepend_timestamp(timestamp: &str, line: &str) -> String {
 /// and writes the prefixed line to `writer`.
 ///
 /// `get_timestamp` is injectable so tests can supply a fixed value.
-pub fn process_lines<R, W, F>(reader: R, writer: &mut W, get_timestamp: F)
+/// Returns `Err` on non-UTF-8 input or any write failure.
+pub fn process_lines<R, W, F>(reader: R, writer: &mut W, get_timestamp: F) -> std::io::Result<()>
 where
     R: BufRead,
     W: Write,
     F: Fn() -> String,
 {
     for line in reader.lines() {
-        let line = line.expect("failed to read line from stdin");
+        let line = line?;
         let output = prepend_timestamp(&get_timestamp(), &line);
-        writeln!(writer, "{}", output).expect("failed to write to stdout");
+        writeln!(writer, "{}", output)?;
     }
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io;
 
     // --- prepend_timestamp ---
 
@@ -75,7 +78,8 @@ mod tests {
 
         process_lines(input.as_ref(), &mut output, || {
             "2026-05-01 14:32:01".to_string()
-        });
+        })
+        .unwrap();
 
         let result = String::from_utf8(output).unwrap();
         assert_eq!(
@@ -94,7 +98,8 @@ mod tests {
 
         process_lines(input.as_ref(), &mut output, || {
             "2026-05-01 14:32:01".to_string()
-        });
+        })
+        .unwrap();
 
         let result = String::from_utf8(output).unwrap();
         assert_eq!(result, "2026-05-01 14:32:01 only line\n");
@@ -107,9 +112,43 @@ mod tests {
 
         process_lines(input.as_ref(), &mut output, || {
             "2026-05-01 14:32:01".to_string()
-        });
+        })
+        .unwrap();
 
         assert!(output.is_empty());
+    }
+
+    #[test]
+    fn process_lines_returns_err_on_invalid_utf8() {
+        // \xff is not valid UTF-8; process_lines should propagate the io::Error
+        let input: &[u8] = b"valid\n\xff\n";
+        let mut output: Vec<u8> = Vec::new();
+
+        let result = process_lines(input, &mut output, || "T".to_string());
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().kind(), io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn process_lines_returns_err_on_broken_pipe() {
+        struct BrokenPipeWriter;
+        impl Write for BrokenPipeWriter {
+            fn write(&mut self, _buf: &[u8]) -> io::Result<usize> {
+                Err(io::Error::new(io::ErrorKind::BrokenPipe, "broken pipe"))
+            }
+            fn flush(&mut self) -> io::Result<()> {
+                Ok(())
+            }
+        }
+
+        let input = b"hello\n";
+        let mut writer = BrokenPipeWriter;
+
+        let result = process_lines(input.as_ref(), &mut writer, || "T".to_string());
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().kind(), io::ErrorKind::BrokenPipe);
     }
 
     // --- validate_format ---
@@ -165,7 +204,8 @@ mod tests {
         process_lines(input.as_ref(), &mut output, || {
             call_count.set(call_count.get() + 1);
             format!("T{}", call_count.get())
-        });
+        })
+        .unwrap();
 
         let result = String::from_utf8(output).unwrap();
         assert_eq!(result, "T1 a\nT2 b\nT3 c\n");
