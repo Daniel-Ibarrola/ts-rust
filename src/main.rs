@@ -1,7 +1,7 @@
 use clap::Parser;
 use std::io::{self, BufReader};
 use std::time::Instant;
-use timestamp::{format_elapsed, format_now, process_lines, validate_format};
+use timestamprs::{format_elapsed, format_now, process_lines, validate_format};
 
 const DEFAULT_FMT: &str = "%b %d %H:%M:%S";
 
