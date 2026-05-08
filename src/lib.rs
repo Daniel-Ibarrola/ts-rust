@@ -2,6 +2,7 @@ use chrono::Local;
 use chrono::format::Item;
 use chrono::format::strftime::StrftimeItems;
 use std::io::{BufRead, Write};
+use std::time::Duration;
 
 /// Validates a strftime format string by checking for any unrecognized specifiers.
 /// Returns `Ok(())` if the format is valid, or `Err(message)` if not.
@@ -17,6 +18,22 @@ pub fn validate_format(fmt: &str) -> Result<(), String> {
 /// Returns the current local time formatted with `fmt`.
 pub fn format_now(fmt: &str) -> String {
     Local::now().format(fmt).to_string()
+}
+
+/// Formats `duration` as HH:MM:SS.sss.
+pub fn format_elapsed(duration: Duration) -> String {
+    let total_millis = duration.as_millis();
+
+    let millis = total_millis % 1_000;
+    let total_seconds = total_millis / 1_000;
+
+    let seconds = total_seconds % 60;
+    let total_minutes = total_seconds / 60;
+
+    let minutes = total_minutes % 60;
+    let hours = total_minutes / 60;
+
+    format!("{:02}:{:02}:{:02}.{:03}", hours, minutes, seconds, millis)
 }
 
 /// Prepends `timestamp` to `line` with a single space separator.
@@ -210,5 +227,31 @@ mod tests {
         let result = String::from_utf8(output).unwrap();
         assert_eq!(result, "T1 a\nT2 b\nT3 c\n");
         assert_eq!(call_count.get(), 3);
+    }
+
+    #[test]
+    fn format_elapsed_duration_is_zero() {
+        assert_eq!(format_elapsed(Duration::ZERO), "00:00:00.000");
+    }
+
+    #[test]
+    fn format_elapsed_subsecond_duration() {
+        assert_eq!(format_elapsed(Duration::from_millis(42)), "00:00:00.042");
+    }
+
+    #[test]
+    fn format_elapsed_one_second_duration() {
+        assert_eq!(format_elapsed(Duration::from_secs(1)), "00:00:01.000");
+    }
+
+    #[test]
+    fn format_elapsed_one_hour_duration() {
+        assert_eq!(format_elapsed(Duration::from_secs(3600)), "01:00:00.000");
+    }
+
+    #[test]
+    fn format_elapsed_edge_cases() {
+        assert_eq!(format_elapsed(Duration::from_secs(60)), "00:01:00.000");
+        assert_eq!(format_elapsed(Duration::from_secs(86400)), "24:00:00.000");
     }
 }

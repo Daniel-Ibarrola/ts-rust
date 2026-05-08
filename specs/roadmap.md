@@ -50,7 +50,7 @@ Set up a basic CI pipeline with GitHub Actions that runs on every push and pull 
 
 ---
 
-## [ ] Phase 5 — Relative timestamps (`-s`)
+## [x] Phase 5 — Relative timestamps (`-s`)
 
 Add `-s` / `--since-start` flag. Timestamp shows elapsed time since the process started (`HH:MM:SS.sss`).
 
