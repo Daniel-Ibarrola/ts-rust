@@ -2,7 +2,7 @@ use chrono::Local;
 use chrono::format::Item;
 use chrono::format::strftime::StrftimeItems;
 use std::io::{BufRead, Write};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// Validates a strftime format string by checking for any unrecognized specifiers.
 /// Returns `Ok(())` if the format is valid, or `Err(message)` if not.
@@ -36,6 +36,17 @@ pub fn format_elapsed(duration: Duration) -> String {
     format!("{:02}:{:02}:{:02}.{:03}", hours, minutes, seconds, millis)
 }
 
+// Format the elapsed time since the last call to `format_incremental`.
+pub fn format_incremental(last: &mut Option<Instant>) -> String {
+    let now = Instant::now();
+    let elapsed = match *last {
+        Some(last) => now.duration_since(last),
+        None => Duration::ZERO,
+    };
+    *last = Some(now);
+    format_elapsed(elapsed)
+}
+
 /// Prepends `timestamp` to `line` with a single space separator.
 pub fn prepend_timestamp(timestamp: &str, line: &str) -> String {
     format!("{} {}", timestamp, line)
@@ -46,11 +57,15 @@ pub fn prepend_timestamp(timestamp: &str, line: &str) -> String {
 ///
 /// `get_timestamp` is injectable so tests can supply a fixed value.
 /// Returns `Err` on non-UTF-8 input or any write failure.
-pub fn process_lines<R, W, F>(reader: R, writer: &mut W, get_timestamp: F) -> std::io::Result<()>
+pub fn process_lines<R, W, F>(
+    reader: R,
+    writer: &mut W,
+    mut get_timestamp: F,
+) -> std::io::Result<()>
 where
     R: BufRead,
     W: Write,
-    F: Fn() -> String,
+    F: FnMut() -> String,
 {
     for line in reader.lines() {
         let line = line?;
@@ -253,5 +268,42 @@ mod tests {
     fn format_elapsed_edge_cases() {
         assert_eq!(format_elapsed(Duration::from_secs(60)), "00:01:00.000");
         assert_eq!(format_elapsed(Duration::from_secs(86400)), "24:00:00.000");
+    }
+
+    #[test]
+    fn format_incremental_first_line_is_zero() {
+        let mut last = None;
+        assert_eq!(format_incremental(&mut last), "00:00:00.000");
+        assert!(last.is_some());
+    }
+
+    #[test]
+    fn format_incremental_second_call_returns_elapsed_time() {
+        let mut last = Some(Instant::now() - Duration::from_millis(500));
+        let result = format_incremental(&mut last);
+        // Should be at least 500ms; allow a few ms of slack for slow CI
+        assert!(
+            result >= "00:00:00.500".to_string(),
+            "expected >= 00:00:00.500, got {}",
+            result
+        );
+    }
+
+    #[test]
+    fn format_incremental_resets_last_after_each_call() {
+        let mut last: Option<Instant> = None;
+        // First call: zero, last is set
+        assert_eq!(format_incremental(&mut last), "00:00:00.000");
+        let after_first = last.unwrap();
+        // Second call: elapsed since first call (should be very small)
+        let result = format_incremental(&mut last);
+        let after_second = last.unwrap();
+        // last was updated — the new instant is strictly after the one set by the first call
+        assert!(
+            after_second > after_first,
+            "last should be reset after each call"
+        );
+        // The elapsed for the second call should be well under 1 second
+        assert!(result < "00:00:01.000".to_string(), "got: {}", result);
     }
 }
