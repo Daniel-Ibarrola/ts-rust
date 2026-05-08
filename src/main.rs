@@ -15,6 +15,10 @@ struct Cli {
     /// Show elapsed time since start (HH:MM:SS.sss) instead of wall-clock time
     #[arg(short = 's', long = "since-start")]
     since_start: bool,
+
+    /// Show elapsed time since previous line (HH:MM:SS.sss) instead of wall-clock time
+    #[arg(short = 'i', long = "incremental")]
+    incremental: bool,
 }
 
 fn main() {
@@ -26,9 +30,20 @@ fn main() {
         std::process::exit(1);
     }
 
+    if cli.incremental && cli.format.is_some() {
+        eprintln!("ts: --incremental and a format string are mutually exclusive");
+        std::process::exit(1);
+    }
+
+    if cli.incremental && cli.since_start {
+        eprintln!("ts: --incremental and --since-start are mutually exclusive");
+        std::process::exit(1);
+    }
+
     let fmt = cli.format.unwrap_or_else(|| DEFAULT_FMT.to_string());
 
     if !cli.since_start
+        && !cli.incremental
         && let Err(e) = validate_format(&fmt)
     {
         eprintln!("ts: {}", e);
@@ -40,9 +55,12 @@ fn main() {
     let stdout = io::stdout();
     let mut writer = stdout.lock();
 
+    let mut last: Option<Instant> = None;
     let get_timestamp = || {
         if cli.since_start {
             format_elapsed(start.elapsed())
+        } else if cli.incremental {
+            format_incremental(&mut last)
         } else {
             format_now(&fmt)
         }
