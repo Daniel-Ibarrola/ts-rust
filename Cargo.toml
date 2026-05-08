@@ -1,8 +1,16 @@
 [package]
-name = "timestamp"
+name = "timestamprs"
 version = "0.1.0"
 edition = "2024"
+description = "A CLI tool for generating timestamps"
+license = "MIT"
+repository = "https://github.com/Daniel-Ibarrola/ts-rust"
+readme = "README.md"
 
 [dependencies]
 chrono = "0.4"
 clap = { version = "4", features = ["derive"] }
+
+[[bin]]
+name = "timestamp"
+path = "src/main.rs"
